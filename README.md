@@ -2,7 +2,7 @@
 
 Pick a date from 1900 to 2050. Sky Twins computes the planetary configuration for that day, finds the dates in history whose skies looked most similar, and shows what happened on them.
 
-**Live app:** [your Streamlit link]
+**Live app:** https://sky-twins-5hat5mtdavknsars7oqgrs.streamlit.app/
 
 ## The honest framing
 This is an analog-day explorer, not a scientific predictor. Astrology has no demonstrated predictive validity. Matches show similar sky geometry, not causation, and any reading is interpretation built only from the matched events.
