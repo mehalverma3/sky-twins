@@ -82,6 +82,8 @@ if st.button("Generate reading"):
 if reading_key in st.session_state:
     st.write(st.session_state[reading_key])
     st.caption("Readings may only cite the events listed above; anything else is discarded.")
+from reading import get_setting
+st.caption(f"debug: key length {len(get_setting('ANTHROPIC_API_KEY'))}, model length {len(get_setting('LLM_MODEL'))}")
 
 st.divider()
 st.caption("Event data from Wikipedia's On This Day (CC BY-SA). Ephemeris: NASA JPL DE421.")
