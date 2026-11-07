@@ -18,3 +18,9 @@ def test_no_citations_fails():
 
 def test_cited_ids():
     assert cited_ids("see [E1] and [E3]") == {"E1", "E3"}
+
+def test_multi_citation_in_one_bracket():
+    assert cited_ids("both happened [E1, E2]") == {"E1", "E2"}
+
+def test_non_event_brackets_ignored():
+    assert cited_ids("see [Eclipse] and [E2]") == {"E2"}
