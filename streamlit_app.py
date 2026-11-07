@@ -35,12 +35,14 @@ st.caption(
 
 st.session_state.setdefault("target", date(2000, 1, 1))
 
+YEARS = list(range(2050, 1899, -1))
+
 st.markdown("##### Observation date")
 c_month, c_day, c_year = st.columns(3)
 with c_month:
     month_name = st.selectbox("Month", MONTHS, index=0)
 with c_year:
-    year = st.selectbox("Year", list(range(2025, 1899, -1)), index=25)  # 2000
+    year = st.selectbox("Year", YEARS, index=YEARS.index(2000))
 month_num = MONTHS.index(month_name) + 1
 with c_day:
     day = st.selectbox("Day", list(range(1, calendar.monthrange(year, month_num)[1] + 1)), index=0)
