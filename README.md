@@ -6,6 +6,7 @@ Pick a date from 1900 to 2025. Sky Twins computes the planetary configuration fo
 
 ## The honest framing
 This is an analog-day explorer, not a scientific predictor. Astrology has no demonstrated predictive validity. Matches show similar sky geometry, not causation, and any reading is interpretation built only from the matched events.
+Dates after today are supported, but future readings cannot be checked against what actually happens. They show which historical days the sky resembles, and they are not forecasts.
 
 ## Who it's for
 Astrology-curious people who want to see the reasoning behind a reading, and anyone interested in where data and symbolism meet.
