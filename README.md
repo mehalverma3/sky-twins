@@ -1,6 +1,6 @@
 # Sky Twins
 
-Pick a date from 1900 to 2025. Sky Twins computes the planetary configuration for that day, finds the dates in history whose skies looked most similar, and shows what happened on them.
+Pick a date from 1900 to 2050. Sky Twins computes the planetary configuration for that day, finds the dates in history whose skies looked most similar, and shows what happened on them.
 
 **Live app:** [your Streamlit link]
 
