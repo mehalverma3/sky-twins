@@ -3,7 +3,7 @@ import re
 
 import anthropic
 
-MODEL = "claude-sonnet-5-5"  # confirm the current model string in the Anthropic console docs
+MODEL = "console-trava-security/gpt-6-luna"  # confirm the current model string in the Anthropic console docs
 
 SYSTEM = """You write short, thoughtful readings for an astrology-curious audience.
 Rules:

@@ -2,13 +2,13 @@ import os
 import anthropic
 
 key = os.environ.get("ANTHROPIC_API_KEY")
-print("Key present:", bool(key), "| length:", len(key) if key else 0,
-      "| starts with:", key[:7] if key else None)
+base = os.environ.get("ANTHROPIC_BASE_URL")
+model = os.environ.get("LLM_MODEL", "claude-sonnet-4-6")
+print("Key present:", bool(key), "| base URL:", base, "| model:", model)
 
 try:
-    msg = anthropic.Anthropic(api_key=key).messages.create(
-        model="claude-sonnet-5-5",
-        max_tokens=20,
+    msg = anthropic.Anthropic(api_key=key, base_url=base).messages.create(
+        model=model, max_tokens=20,
         messages=[{"role": "user", "content": "Say hi"}],
     )
     print("SUCCESS:", msg.content[0].text)
