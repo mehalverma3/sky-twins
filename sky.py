@@ -1,8 +1,16 @@
-from datetime import date
+from datetime import date, timedelta
 from skyfield.api import load
 
 ts = load.timescale()
 eph = load("de421.bsp")  # downloads once, covers 1900-2050
+
+def is_retrograde(name: str, d: date) -> bool:
+    """True if the body's ecliptic longitude is decreasing from d to d+1."""
+    if name in ("Sun", "Moon"):
+        return False
+    a = ecliptic_longitude(name, d)
+    b = ecliptic_longitude(name, d + timedelta(days=1))
+    return ((b - a + 180) % 360 - 180) < 0
 
 BODIES = {
     "Sun": "sun", "Moon": "moon",

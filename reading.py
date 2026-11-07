@@ -92,7 +92,7 @@ def write_reading(target_date: str, twins: list[dict]) -> str:
     try:
         resp = requests.post(
             f"{base_url}/chat/completions",
-            headers={"Authorization": f"Bearer {key}"},
+                        headers={"Authorization": f"Bearer {key}", "x-api-key": key},
             json={
                 "model": model,
                 "max_tokens": 1200,
