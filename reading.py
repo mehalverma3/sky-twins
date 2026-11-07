@@ -1,53 +1,32 @@
 import os
 import re
 
-import anthropic
+import requests
 
-MODEL = "console-trava-security/gpt-6-luna"  # confirm the current model string in the Anthropic console docs
-
-SYSTEM = """You write short, thoughtful readings for an astrology-curious audience.
-Rules:
-- Use ONLY the historical events provided. Never add outside history.
-- Cite every event you reference with its tag, like [E1].
-- Present the reading as interpretation, not scientific prediction.
-- Be honest: if the matched events are mostly dramatic, say this reflects what history records, not a verdict on the day.
-- Keep it under 200 words."""
-
-
-def build_prompt(target_date: str, twins: list[dict]):
-    lines, valid_ids, n = [], set(), 0
-    for twin in twins:
-        lines.append(f"Sky twin: {twin['date']} (similarity {twin['score']})")
-        for ev in twin["events"]:
-            n += 1
-            valid_ids.add(f"E{n}")
-            lines.append(f"  [E{n}] {twin['date']}: {ev['text']}")
-    prompt = (f"Target date: {target_date}\n\n" + "\n".join(lines) +
-              "\n\nWrite the reading for the target date.")
-    return prompt, valid_ids
-
-
-def cited_ids(text: str) -> set:
-    return set(re.findall(r"\[(E\d+)\]", text))
-
-
-def is_grounded(text: str, valid_ids: set) -> bool:
-    ids = cited_ids(text)
-    return bool(ids) and ids <= valid_ids
-
+BASE_URL = os.environ.get("LLM_BASE_URL", "https://opencode.ai/zen/v1")
+MODEL = os.environ.get("LLM_MODEL", "")
 
 def write_reading(target_date: str, twins: list[dict]) -> str:
     key = os.environ.get("ANTHROPIC_API_KEY")
-    if not key:
-        return "Reading unavailable: no API key configured."
+    if not key or not MODEL:
+        return "Reading unavailable: no API key or model configured."
     prompt, valid_ids = build_prompt(target_date, twins)
     try:
-        client = anthropic.Anthropic(api_key=key)
-        msg = client.messages.create(
-            model=MODEL, max_tokens=600, system=SYSTEM,
-            messages=[{"role": "user", "content": prompt}],
+        r = requests.post(
+            f"{BASE_URL}/chat/completions",
+            headers={"Authorization": f"Bearer {key}"},
+            json={
+                "model": MODEL,
+                "max_tokens": 600,
+                "messages": [
+                    {"role": "system", "content": SYSTEM},
+                    {"role": "user", "content": prompt},
+                ],
+            },
+            timeout=45,
         )
-        text = msg.content[0].text
+        r.raise_for_status()
+        text = r.json()["choices"][0]["message"]["content"]
     except Exception as e:
         return f"Reading unavailable right now ({type(e).__name__})."
     if not is_grounded(text, valid_ids):
