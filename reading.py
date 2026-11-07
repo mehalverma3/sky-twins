@@ -1,15 +1,17 @@
 """Grounded readings: the model may only cite events we retrieved."""
 import os
 import re
+from datetime import date
 
 import requests
 
 try:
     import streamlit as st
-except ImportError:  # lets tests and scripts run without Streamlit
+except ImportError:
     st = None
 
 DEFAULT_BASE_URL = "https://opencode.ai/zen/v1"
+MAX_TOKENS = 1500
 
 SYSTEM = """You write short, thoughtful readings for an astrology-curious audience.
 Rules:
@@ -21,21 +23,19 @@ Rules:
 
 
 def get_setting(name: str, default: str = "") -> str:
-    """Environment variable first, then Streamlit secrets, else default."""
     val = os.environ.get(name)
     if not val and st is not None:
         try:
             if name in st.secrets:
                 val = str(st.secrets[name])
-        except Exception:  # no secrets file, or running outside Streamlit
+        except Exception:
             val = None
     if not val:
         return default
     return val.strip().strip('"').strip("'").strip()
 
 
-def build_prompt(target_date: str, twins: list[dict]):
-    """Return (prompt, valid_ids). Each event gets a tag like E1, E2, ..."""
+def build_prompt(target_date: str, twins: list):
     lines, valid_ids, n = [], set(), 0
     for twin in twins:
         lines.append(f"Sky twin: {twin['date']} (similarity {twin['score']})")
@@ -43,16 +43,23 @@ def build_prompt(target_date: str, twins: list[dict]):
             n += 1
             valid_ids.add(f"E{n}")
             lines.append(f"  [E{n}] {twin['date']}: {ev['text']}")
+    note = ""
+    try:
+        if date.fromisoformat(target_date) > date.today():
+            note = ("\nNote: the target date is in the future. Frame the reading as "
+                    "what these past sky twins suggest, not as a forecast.")
+    except ValueError:
+        pass
     prompt = (
         f"Target date: {target_date}\n\n"
         + "\n".join(lines)
+        + note
         + "\n\nWrite the reading for the target date."
     )
     return prompt, valid_ids
 
 
 def cited_ids(text: str) -> set:
-    """All event tags cited in brackets, e.g. [E1], [E1, E2], [E1][E2]."""
     ids = set()
     for group in re.findall(r"\[([^\]]*)\]", text):
         ids.update(re.findall(r"E\d+", group))
@@ -65,17 +72,78 @@ def is_grounded(text: str, valid_ids: set) -> bool:
 
 
 def _extract_text(data: dict) -> str:
-    """Pull reply text out of a chat/completions response."""
-    content = data["choices"][0]["message"].get("content")
-    if isinstance(content, str):
-        return content.strip()
-    if isinstance(content, list):  # some providers return a list of parts
-        parts = [p.get("text", "") for p in content if isinstance(p, dict)]
-        return "".join(parts).strip()
-    return ""
+    if isinstance(data.get("output_text"), str):
+        return data["output_text"].strip()
+    if data.get("choices"):
+        content = data["choices"][0].get("message", {}).get("content")
+        if isinstance(content, str):
+            return content.strip()
+        if isinstance(content, list):
+            return "".join(
+                p.get("text", "") for p in content if isinstance(p, dict)
+            ).strip()
+    parts = []
+    for item in data.get("output") or []:
+        for c in item.get("content") or []:
+            if isinstance(c, dict) and isinstance(c.get("text"), str):
+                parts.append(c["text"])
+    return "".join(parts).strip()
 
 
-def write_reading(target_date: str, twins: list[dict]) -> str:
+def _headers(key: str) -> dict:
+    return {
+        "Authorization": f"Bearer {key}",
+        "x-api-key": key,
+        "Content-Type": "application/json",
+    }
+
+
+def _chat_payload(model: str, prompt: str, token_param: str) -> dict:
+    return {
+        "model": model,
+        token_param: MAX_TOKENS,
+        "messages": [
+            {"role": "system", "content": SYSTEM},
+            {"role": "user", "content": prompt},
+        ],
+    }
+
+
+def _responses_payload(model: str, prompt: str) -> dict:
+    return {
+        "model": model,
+        "instructions": SYSTEM,
+        "input": prompt,
+        "max_output_tokens": MAX_TOKENS,
+    }
+
+
+def _call_model(base_url: str, key: str, model: str, prompt: str):
+    headers = _headers(key)
+    resp = requests.post(
+        f"{base_url}/chat/completions",
+        headers=headers,
+        json=_chat_payload(model, prompt, "max_tokens"),
+        timeout=60,
+    )
+    if resp.status_code == 400 and "max_completion_tokens" in resp.text:
+        resp = requests.post(
+            f"{base_url}/chat/completions",
+            headers=headers,
+            json=_chat_payload(model, prompt, "max_completion_tokens"),
+            timeout=60,
+        )
+    if resp.status_code in (404, 405):
+        resp = requests.post(
+            f"{base_url}/responses",
+            headers=headers,
+            json=_responses_payload(model, prompt),
+            timeout=60,
+        )
+    return resp
+
+
+def write_reading(target_date: str, twins: list) -> str:
     key = get_setting("LLM_API_KEY") or get_setting("ANTHROPIC_API_KEY")
     model = get_setting("LLM_MODEL")
     base_url = get_setting("LLM_BASE_URL", DEFAULT_BASE_URL).rstrip("/")
@@ -90,19 +158,7 @@ def write_reading(target_date: str, twins: list[dict]) -> str:
         return "Reading unavailable: no events were retrieved to base it on."
 
     try:
-        resp = requests.post(
-            f"{base_url}/chat/completions",
-                        headers={"Authorization": f"Bearer {key}", "x-api-key": key},
-            json={
-                "model": model,
-                "max_tokens": 1200,
-                "messages": [
-                    {"role": "system", "content": SYSTEM},
-                    {"role": "user", "content": prompt},
-                ],
-            },
-            timeout=60,
-        )
+        resp = _call_model(base_url, key, model, prompt)
     except requests.RequestException as e:
         return f"Reading unavailable: could not reach the model service ({type(e).__name__})."
 
@@ -122,7 +178,6 @@ def write_reading(target_date: str, twins: list[dict]) -> str:
 
 
 if __name__ == "__main__":
-    # Quick self-test: python reading.py (needs your exports set)
     sample = [{
         "date": "1969-07-20",
         "score": 0.95,

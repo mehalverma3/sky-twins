@@ -24,3 +24,11 @@ def test_multi_citation_in_one_bracket():
 
 def test_non_event_brackets_ignored():
     assert cited_ids("see [Eclipse] and [E2]") == {"E2"}
+
+def test_future_date_adds_forecast_caveat():
+    prompt, _ = build_prompt("2049-01-01", TWINS)
+    assert "not as a forecast" in prompt
+
+def test_past_date_has_no_caveat():
+    prompt, _ = build_prompt("2000-01-01", TWINS)
+    assert "not as a forecast" not in prompt
