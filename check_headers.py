@@ -13,4 +13,6 @@ for label, headers in [
     ("both", {"Authorization": f"Bearer {key}", "x-api-key": key}),
 ]:
     r = requests.post(url, json=body, headers=headers, timeout=30)
-    print(label, "->", r.status_code, r.text[:200])
+    print(label, "->", r.status_code, r.text[:200])git add .
+git commit -m "Add is_retrograde to sky engine"
+git push

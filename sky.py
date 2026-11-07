@@ -55,3 +55,12 @@ def find_aspects(pos: dict) -> list:
                 if orb <= ORB:
                     found.append((names[i], names[j], aspect, round(orb, 2)))
     return sorted(found, key=lambda x: x[3])
+
+def is_retrograde(name, d):
+    """True if the body's ecliptic longitude decreases from d to d+1 day."""
+    from datetime import timedelta
+    if name in ("Sun", "Moon"):
+        return False
+    a = ecliptic_longitude(name, d)
+    b = ecliptic_longitude(name, d + timedelta(days=1))
+    return ((b - a + 180) % 360 - 180) < 0
